@@ -1,6 +1,3 @@
-#![feature(fn_traits)]
-#![feature(unboxed_closures)]
-
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::ops::{Fn, Index, IndexMut};
@@ -13,6 +10,9 @@ pub struct BinaryHeap<T, F: Fn(&T, &T) -> Ordering> {
 impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
     pub fn new(func: F) -> Self {
         BinaryHeap { data: vec![], func }
+    }
+    fn compare(&self, x: usize, y: usize) -> Ordering {
+        (self.func)(&self.data[x], &self.data[y])
     }
 
     pub fn from_array(data: Vec<T>, func: F) -> Self {
@@ -36,12 +36,12 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
             return;
         }
 
-        let index = if right < self.len() && self(right, left) == Ordering::Greater {
+        let index = if right < self.len() && self.compare(right, left) == Ordering::Greater {
             right
         } else {
             left
         };
-        if self(index, root) == Ordering::Greater {
+        if self.compare(index, root) == Ordering::Greater {
             self.data.swap(root, index);
             self.heapify(index);
         }
@@ -71,7 +71,7 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
 
         while index > 0 {
             let parent = (index - 1) >> 1;
-            if self(parent, index) == Ordering::Greater {
+            if self.compare(parent, index) == Ordering::Greater {
                 break;
             }
             self.data.swap(parent, index);
@@ -90,24 +90,18 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
             self[0] = item;
         }
     }
+    pub fn extend(&mut self, items: &[T]) {
+        for item in items {
+            self.push(item.clone());
+        }
+    }
+}
+impl<T: Debug + Clone + Ord, F: Fn(&T, &T) -> Ordering> From<Vec<T>> for BinaryHeap<T, F> {
+    fn from(data: Vec<T>) -> Self {
+        BinaryHeap { data, func: T::cmp }
+    }
 }
 
-impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> FnOnce<(usize, usize)> for BinaryHeap<T, F> {
-    type Output = Ordering;
-    extern "rust-call" fn call_once(self, args: (usize, usize)) -> Self::Output {
-        (self.func)(&self.data[args.0], &self.data[args.1])
-    }
-}
-impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> Fn<(usize, usize)> for BinaryHeap<T, F> {
-    extern "rust-call" fn call(&self, args: (usize, usize)) -> Self::Output {
-        (self.func)(&self.data[args.0], &self.data[args.1])
-    }
-}
-impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> FnMut<(usize, usize)> for BinaryHeap<T, F> {
-    extern "rust-call" fn call_mut(&mut self, args: (usize, usize)) -> Self::Output {
-        (self.func)(&self.data[args.0], &self.data[args.1])
-    }
-}
 impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> Index<usize> for BinaryHeap<T, F> {
     type Output = T;
     fn index(&self, index: usize) -> &Self::Output {
