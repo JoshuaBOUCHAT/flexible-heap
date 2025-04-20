@@ -21,14 +21,16 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
     ///Create a binary heap by taking ownership of the array. This operation is done in O(N) time.
     pub fn from_array(data: Vec<T>, func: F) -> Self {
         let mut heap = BinaryHeap { data, func };
-        if heap.len() > 1 {
-            let first_index = (heap.len() >> 1) - 1;
+        heap.heapify();
+        heap
+    }
+    fn heapify(&mut self) {
+        if self.len() > 1 {
+            let first_index = (self.len() >> 1) - 1;
             for i in (0..=first_index).rev() {
-                heap.sift_down(i);
+                self.sift_down(i);
             }
         }
-
-        heap
     }
     pub fn len(&self) -> usize {
         self.data.len()
@@ -100,10 +102,16 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
         }
     }
     /// This function add each elements one by one with log(n) each push -> k*log(n+k) where k is the number of elements to add.
+    /// If you want to add a big  number of item comparer to what's already inside the heap you should consider using bulk_extend.
     pub fn extend(&mut self, items: &[T]) {
         for item in items {
             self.push(item.clone());
         }
+    }
+    /// This function is use when inserting a big amout of items into an existing heap if the number of elements is small prefer using the normal extend
+    pub fn bulk_extend(&mut self, items: &[T]) {
+        self.data.extend_from_slice(items);
+        self.heapify();
     }
 }
 
