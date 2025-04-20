@@ -112,6 +112,25 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> IndexMut<usize> for BinaryHeap
         &mut self.data[index]
     }
 }
+///Take ownership of the BinaryHeap and return an iterator of sorted elements
+impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> IntoIterator for BinaryHeap<T, F> {
+    type Item = T;
+    type IntoIter = HeapIterator<T, F>;
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter { inner: self }
+    }
+}
+
+pub struct HeapIterator<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> {
+    inner: BinaryHeap<T, F>,
+}
+impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> Iterator for HeapIterator<T, F> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.pop()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::BinaryHeap;
@@ -158,5 +177,11 @@ mod test {
         assert_eq!(heap.pop(), Some(5));
         assert_eq!(heap.pop(), Some(6));
         assert_eq!(heap.pop(), None);
+    }
+    #[test]
+    fn test_iterator() {
+        let mut heap = BinaryHeap::from_array(vec![5, 4, 3, 2, 1], |a, b| b.cmp(a));
+        heap.update_top(6);
+        assert_eq!(heap.into_iter().collect::<Vec<i32>>(), vec![2, 3, 4, 5, 6]);
     }
 }
