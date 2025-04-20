@@ -20,7 +20,7 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
         if heap.len() > 1 {
             let first_index = (heap.len() >> 1) - 1;
             for i in (0..=first_index).rev() {
-                heap.heapify(i);
+                heap.sift_down(i);
             }
         }
 
@@ -29,23 +29,27 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
     pub fn len(&self) -> usize {
         self.data.len()
     }
-    fn heapify(&mut self, root: usize) {
-        let right = (root + 1) << 1;
-        let left = right - 1;
-        if left >= self.len() {
-            return;
-        }
-
-        let index = if right < self.len() && self.compare(right, left) == Ordering::Greater {
-            right
-        } else {
-            left
-        };
-        if self.compare(index, root) == Ordering::Greater {
-            self.data.swap(root, index);
-            self.heapify(index);
+    fn sift_down(&mut self, mut root: usize) {
+        loop {
+            let right = (root + 1) << 1;
+            let left = right - 1;
+            if left >= self.len() {
+                return;
+            }
+            let index = if right < self.len() && self.compare(right, left) == Ordering::Greater {
+                right
+            } else {
+                left
+            };
+            if self.compare(index, root) == Ordering::Greater {
+                self.data.swap(root, index);
+                root = index;
+            } else {
+                return;
+            }
         }
     }
+
     pub fn peak(&self) -> Option<&T> {
         self.data.get(0)
     }
@@ -60,7 +64,7 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
         self.data.swap(0, last);
         let temp = self.data.pop();
         if self.len() > 1 {
-            self.heapify(0);
+            self.sift_down(0);
         }
 
         temp
@@ -85,7 +89,7 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
         }
         if (self.func)(&self[0], &item) == Ordering::Greater {
             self[0] = item;
-            self.heapify(0);
+            self.sift_down(0);
         } else {
             self[0] = item;
         }
@@ -94,11 +98,6 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> BinaryHeap<T, F> {
         for item in items {
             self.push(item.clone());
         }
-    }
-}
-impl<T: Debug + Clone + Ord, F: Fn(&T, &T) -> Ordering> From<Vec<T>> for BinaryHeap<T, F> {
-    fn from(data: Vec<T>) -> Self {
-        BinaryHeap { data, func: T::cmp }
     }
 }
 
@@ -117,7 +116,7 @@ impl<T: Debug + Clone, F: Fn(&T, &T) -> Ordering> IndexMut<usize> for BinaryHeap
 mod test {
     use crate::BinaryHeap;
     #[test]
-    fn test_heapify() {
+    fn test_sift_down() {
         let original = vec![5, 4, 3, 2, 1];
         let heap = BinaryHeap::from_array(original, |a, b| b.cmp(a));
         //[5, 4, 3, 2, 1]
